@@ -80,7 +80,7 @@ exports.getAppropriateMoment = function (schedule, duration, workingHours) {
          */
         tryLater: function () {
             this.exists();
-            
+
             freeSchedule[0].from = addHalfHour(freeSchedule[0].from);
 
             return this.exists();
