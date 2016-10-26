@@ -46,6 +46,10 @@ exports.getAppropriateMoment = function (schedule, duration, workingHours) {
                 freeSchedule.splice(0, 1);
             }
 
+            if (freeSchedule.length) {
+                appropriateMoment = parseTime(freeSchedule[0].from);
+            }
+
             return Boolean(freeSchedule.length);
         },
 
@@ -57,18 +61,16 @@ exports.getAppropriateMoment = function (schedule, duration, workingHours) {
          * @returns {String}
          */
         format: function (template) {
-            if (this.exists()) {
-                var parsedTime = parseTime(freeSchedule[0].from);
+            this.exists();
 
-                appropriateMoment = template
-                    .replace('%DD', parsedTime.weekday)
-                    .replace('%HH', parsedTime.hours)
-                    .replace('%MM', parsedTime.minutes);
-
-                return appropriateMoment;
+            if (!appropriateMoment) {
+                return '';
             }
 
-            return appropriateMoment || '';
+            return template
+                .replace('%DD', appropriateMoment.weekday)
+                .replace('%HH', appropriateMoment.hours)
+                .replace('%MM', appropriateMoment.minutes);
         },
 
         /**
@@ -77,6 +79,8 @@ exports.getAppropriateMoment = function (schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
+            this.exists();
+            
             freeSchedule[0].from = addHalfHour(freeSchedule[0].from);
 
             return this.exists();
