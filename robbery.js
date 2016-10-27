@@ -50,7 +50,7 @@ exports.getAppropriateMoment = function (schedule, duration, workingHours) {
                 appropriateMoment = parseTime(freeSchedule[0].from);
             }
 
-            return Boolean(freeSchedule.length);
+            return Boolean(freeSchedule.length) || (appropriateMoment !== undefined);
         },
 
         /**
@@ -62,6 +62,10 @@ exports.getAppropriateMoment = function (schedule, duration, workingHours) {
          */
         format: function (template) {
             this.exists();
+
+            if (freeSchedule.length) {
+                appropriateMoment = parseTime(freeSchedule[0].from);
+            }
 
             if (!appropriateMoment) {
                 return '';
@@ -79,13 +83,15 @@ exports.getAppropriateMoment = function (schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
+            this.exists();
             if (freeSchedule.length) {
+                freeSchedule[0].from = addHalfHour(freeSchedule[0].from);
                 this.exists();
 
-                freeSchedule[0].from = addHalfHour(freeSchedule[0].from);
+                return Boolean(freeSchedule.length);
             }
 
-            return this.exists();
+            return false;
         }
     };
 };
