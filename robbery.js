@@ -89,7 +89,7 @@ exports.getAppropriateMoment = function (schedule, duration, workingHours) {
 };
 
 function convertToTimeZone(needTimeZone, time) {
-    var offset = { 'ПН': 0, 'ВТ': 24, 'СР': 48 };
+    var offset = { 'ВС': -24, 'ПН': 0, 'ВТ': 24, 'СР': 48, 'ЧТ': 72 };
     var weekday = time.slice(0, 2);
     var timeZone = parseInt(time.slice(8, 10));
     var hours = parseInt(time.slice(3, 5)) - timeZone + needTimeZone + offset[weekday];
@@ -133,11 +133,11 @@ function changeInterval(freeSchedule, from, to) {
             freeSchedule.splice(i + 1, 0, { from: to, to: toFree });
         }
 
-        if (fromFree < from && toFree > from && toFree < to) {
+        if (fromFree < from && toFree > from && toFree <= to) {
             freeSchedule[i].to = from;
         }
 
-        if (fromFree < to && toFree > to && from < fromFree) {
+        if (fromFree < to && toFree > to && from <= fromFree) {
             freeSchedule[i].from = to;
         }
     }
