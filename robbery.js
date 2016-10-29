@@ -107,48 +107,49 @@ function convertToTimeZone(needTimeZone, time) {
 }
 
 function addToBusySchedule(busySchedule, needTimeZone, array) {
-    for (var i = 0; i < array.length; i++) {
+    array.forEach(function (interval) {
         busySchedule.push({
-            from: convertToTimeZone(needTimeZone, array[i].from),
-            to: convertToTimeZone(needTimeZone, array[i].to)
+            from: convertToTimeZone(needTimeZone, interval.from),
+            to: convertToTimeZone(needTimeZone, interval.to)
         });
-    }
+    });
 }
 
 function makeBusySchedule(busySchedule, needTimeZone, schedule) {
-    addToBusySchedule(busySchedule, needTimeZone, schedule.Danny);
-    addToBusySchedule(busySchedule, needTimeZone, schedule.Rusty);
-    addToBusySchedule(busySchedule, needTimeZone, schedule.Linus);
+    Object.keys(schedule)
+        .forEach(function (key) {
+            addToBusySchedule(busySchedule, needTimeZone, schedule[key]);
+        });
 }
 
 function changeFreeSchedule(busySchedule, freeSchedule) {
-    for (var i = 0; i < busySchedule.length; i++) {
-        changeInterval(freeSchedule, busySchedule[i].from, busySchedule[i].to);
-    }
+    busySchedule.forEach(function (interval) {
+        changeInterval(freeSchedule, interval.from, interval.to);
+    });
 }
 
 function changeInterval(freeSchedule, from, to) {
-    for (var i = 0; i < freeSchedule.length; i++) {
-        var fromFree = freeSchedule[i].from;
-        var toFree = freeSchedule[i].to;
+    freeSchedule.forEach(function (interval, i) {
+        var fromFree = interval.from;
+        var toFree = interval.to;
 
         if (fromFree > from && toFree < to) {
             freeSchedule.splice(i, 1);
         }
 
         if (fromFree < from && toFree > to) {
-            freeSchedule[i].to = from;
+            interval.to = from;
             freeSchedule.splice(i + 1, 0, { from: to, to: toFree });
         }
 
         if (fromFree < from && toFree > from && toFree <= to) {
-            freeSchedule[i].to = from;
+            interval.to = from;
         }
 
         if (fromFree < to && toFree > to && from <= fromFree) {
-            freeSchedule[i].from = to;
+            interval.from = to;
         }
-    }
+    });
 }
 
 function getIntervalLength(interval) {
