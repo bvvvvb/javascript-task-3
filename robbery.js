@@ -6,6 +6,11 @@
  */
 exports.isStar = true;
 
+var HOURS_IN_DAY = 24;
+var MINUTES_IN_HOUR = 60;
+var MINUTES_IN_DAY = HOURS_IN_DAY * MINUTES_IN_HOUR;
+var DAYS_FOR_ROBBERY = 3;
+
 /**
  * @param {Object} schedule – Расписание Банды
  * @param {Number} duration - Время на ограбление в минутах
@@ -15,25 +20,10 @@ exports.isStar = true;
  * @returns {Object}
  */
 exports.getAppropriateMoment = function (schedule, duration, workingHours) {
-    var needTimeZone = parseInt(workingHours.from.slice(5, 7));
-
-    var busySchedule = [];
-
-    var workingHoursMonday = {
-        from: parseInt(workingHours.from.slice(0, 2) + workingHours.from.slice(3, 5)),
-        to: parseInt(workingHours.to.slice(0, 2) + workingHours.to.slice(3, 5))
-    };
-
-    var freeSchedule = [
-        workingHoursMonday,
-        { from: workingHoursMonday.from + 2400, to: workingHoursMonday.to + 2400 },
-        { from: workingHoursMonday.from + 4800, to: workingHoursMonday.to + 4800 }
-    ];
-
+    var needTimeZone = parseInt(workingHours.from.slice(5), 10);
+    var busySchedule = makeBusySchedule(needTimeZone, schedule);
+    var freeSchedule = makeFreeSchedule(busySchedule, workingHours);
     var appropriateMoment;
-
-    makeBusySchedule(busySchedule, needTimeZone, schedule);
-    changeFreeSchedule(busySchedule, freeSchedule);
 
     return {
 
@@ -42,7 +32,7 @@ exports.getAppropriateMoment = function (schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         exists: function () {
-            while (freeSchedule.length && getIntervalLength(freeSchedule[0]) < duration) {
+            while (freeSchedule.length && (freeSchedule[0].to - freeSchedule[0].from) < duration) {
                 freeSchedule.splice(0, 1);
             }
 
@@ -85,7 +75,7 @@ exports.getAppropriateMoment = function (schedule, duration, workingHours) {
         tryLater: function () {
             this.exists();
             if (freeSchedule.length) {
-                freeSchedule[0].from = addHalfHour(freeSchedule[0].from);
+                freeSchedule[0].from = freeSchedule[0].from + 30;
                 this.exists();
 
                 return Boolean(freeSchedule.length);
@@ -97,17 +87,23 @@ exports.getAppropriateMoment = function (schedule, duration, workingHours) {
 };
 
 function convertToTimeZone(needTimeZone, time) {
-    var offset = { 'ВС': -24, 'ПН': 0, 'ВТ': 24, 'СР': 48, 'ЧТ': 72 };
+    var offset = {
+        'ВС': -1 * MINUTES_IN_DAY,
+        'ПН': 0,
+        'ВТ': MINUTES_IN_DAY,
+        'СР': 2 * MINUTES_IN_DAY,
+        'ЧТ': 3 * MINUTES_IN_DAY
+    };
     var weekday = time.slice(0, 2);
-    var timeZone = parseInt(time.slice(8, 10));
-    var hours = parseInt(time.slice(3, 5)) - timeZone + needTimeZone + offset[weekday];
-    var minutes = parseInt(time.slice(6, 8));
+    var timeZone = parseInt(time.slice(8), 10);
+    var hours = parseInt(time.slice(3, 5), 10) - timeZone + needTimeZone;
+    var minutes = parseInt(time.slice(6, 8), 10);
 
-    return hours * 100 + minutes;
+    return hours * MINUTES_IN_HOUR + offset[weekday] + minutes;
 }
 
-function addToBusySchedule(busySchedule, needTimeZone, array) {
-    array.forEach(function (interval) {
+function addToBusySchedule(busySchedule, needTimeZone, personSchedule) {
+    personSchedule.forEach(function (interval) {
         busySchedule.push({
             from: convertToTimeZone(needTimeZone, interval.from),
             to: convertToTimeZone(needTimeZone, interval.to)
@@ -115,20 +111,40 @@ function addToBusySchedule(busySchedule, needTimeZone, array) {
     });
 }
 
-function makeBusySchedule(busySchedule, needTimeZone, schedule) {
+function makeBusySchedule(needTimeZone, schedule) {
+    var busySchedule = [];
+
     Object.keys(schedule)
         .forEach(function (key) {
             addToBusySchedule(busySchedule, needTimeZone, schedule[key]);
         });
+
+    return busySchedule;
 }
 
-function changeFreeSchedule(busySchedule, freeSchedule) {
+function makeFreeSchedule(busySchedule, workingHours) {
+    var freeSchedule = [];
+
+    var workingFrom = parseInt(workingHours.from.slice(0, 2), 10) * MINUTES_IN_HOUR +
+        parseInt(workingHours.from.slice(3, 5), 10);
+    var workingTo = parseInt(workingHours.to.slice(0, 2), 10) * MINUTES_IN_HOUR +
+        parseInt(workingHours.to.slice(3, 5), 10);
+
+    for (var i = 0; i < DAYS_FOR_ROBBERY; i++) {
+        freeSchedule.push({
+            from: i * MINUTES_IN_DAY + workingFrom,
+            to: i * MINUTES_IN_DAY + workingTo
+        });
+    }
+
     busySchedule.forEach(function (interval) {
-        changeInterval(freeSchedule, interval.from, interval.to);
+        correctFreeSchedule(freeSchedule, interval.from, interval.to);
     });
+
+    return freeSchedule;
 }
 
-function changeInterval(freeSchedule, from, to) {
+function correctFreeSchedule(freeSchedule, from, to) {
     freeSchedule.forEach(function (interval, i) {
         var fromFree = interval.from;
         var toFree = interval.to;
@@ -152,41 +168,18 @@ function changeInterval(freeSchedule, from, to) {
     });
 }
 
-function getIntervalLength(interval) {
-    var fromHours = Math.floor(interval.from / 100);
-    var fromMinutes = interval.from % 100;
-    var toHours = Math.floor(interval.to / 100);
-    var toMinutes = interval.to % 100;
-
-    return (toHours - fromHours) * 60 - fromMinutes + toMinutes;
-}
-
 function parseTime(time) {
-    var hours = Math.floor(time / 100);
-    var day = Math.floor(hours / 24);
+    var hours = Math.floor(time / MINUTES_IN_HOUR);
+    var minutes = time % MINUTES_IN_HOUR;
+    var day = Math.floor(hours / HOURS_IN_DAY);
 
     return {
-        hours: toTwoDigits(hours - 24 * day),
-        minutes: toTwoDigits(time % 100),
+        hours: toTwoDigits(hours - HOURS_IN_DAY * day),
+        minutes: toTwoDigits(minutes),
         weekday: ['ПН', 'ВТ', 'СР'][day]
     };
 }
 
 function toTwoDigits(number) {
-    if (number < 10) {
-        return '0' + number;
-    }
-
-    return String(number);
-}
-
-function addHalfHour(time) {
-    var hours = Math.floor(time / 100);
-    var minutes = time % 100 + 30;
-
-    if (minutes <= 59) {
-        return hours * 100 + minutes;
-    }
-
-    return (hours + 1) * 100 + minutes - 60;
+    return (number < 10) ? '0' + number : number.toString();
 }
