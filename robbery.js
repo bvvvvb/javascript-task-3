@@ -9,7 +9,7 @@ exports.isStar = true;
 var HOURS_IN_DAY = 24;
 var MINUTES_IN_HOUR = 60;
 var MINUTES_IN_DAY = HOURS_IN_DAY * MINUTES_IN_HOUR;
-var DAYS_FOR_ROBBERY = 3;
+var ROBBERY_DAYS = ['ПН', 'ВТ', 'СР'];
 
 /**
  * @param {Object} schedule – Расписание Банды
@@ -52,10 +52,6 @@ exports.getAppropriateMoment = function (schedule, duration, workingHours) {
          */
         format: function (template) {
             this.exists();
-
-            if (freeSchedule.length) {
-                appropriateMoment = parseTime(freeSchedule[0].from);
-            }
 
             if (!appropriateMoment) {
                 return '';
@@ -130,7 +126,7 @@ function makeFreeSchedule(busySchedule, workingHours) {
     var workingTo = parseInt(workingHours.to.slice(0, 2), 10) * MINUTES_IN_HOUR +
         parseInt(workingHours.to.slice(3, 5), 10);
 
-    for (var i = 0; i < DAYS_FOR_ROBBERY; i++) {
+    for (var i = 0; i < ROBBERY_DAYS.length; i++) {
         freeSchedule.push({
             from: i * MINUTES_IN_DAY + workingFrom,
             to: i * MINUTES_IN_DAY + workingTo
@@ -176,7 +172,7 @@ function parseTime(time) {
     return {
         hours: toTwoDigits(hours - HOURS_IN_DAY * day),
         minutes: toTwoDigits(minutes),
-        weekday: ['ПН', 'ВТ', 'СР'][day]
+        weekday: ROBBERY_DAYS[day]
     };
 }
 
